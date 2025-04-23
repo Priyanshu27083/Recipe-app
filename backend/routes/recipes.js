@@ -92,4 +92,26 @@ router.get('/by-time', (req, res) => {
   });
 });
 
+// POST new recipe
+router.post('/', (req, res) => {
+  const { name, cuisine, cookingTime, difficulty, ingredients, instructions } = req.body;
+  
+  const query = 'INSERT INTO recipes (name, cuisine, cookingTime, difficulty, ingredients, instructions) VALUES (?, ?, ?, ?, ?, ?)';
+  
+  db.query(
+    query,
+    [name, cuisine, cookingTime, difficulty, ingredients, instructions],
+    (err, results) => {
+      if (err) {
+        console.error('Error adding recipe:', err);
+        return res.status(500).json({ error: 'Error adding recipe' });
+      }
+      res.status(201).json({ 
+        message: 'Recipe added successfully', 
+        recipeId: results.insertId 
+      });
+    }
+  );
+});
+
 module.exports = router;
