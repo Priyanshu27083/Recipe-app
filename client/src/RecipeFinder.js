@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
 
-function RecipeFinder() {
+function RecipeFinder({ shouldRefresh, onRefreshComplete }) {
   const [recipes, setRecipes] = useState([]);
   const [filteredRecipes, setFilteredRecipes] = useState([]);
   const [cuisines, setCuisines] = useState([]);
@@ -15,35 +15,43 @@ function RecipeFinder() {
     ingredient: ''
   });
 
+  const fetchData = async () => {
+    try {
+      const [recipesRes, cuisinesRes, ingredientsRes] = await Promise.all([
+        axios.get('/api/recipes'),
+        axios.get('/api/recipes/cuisines'),
+        axios.get('/api/recipes/ingredients')
+      ]);
+
+      const parsedRecipes = recipesRes.data.map(recipe => ({
+        ...recipe,
+        ingredients: recipe.ingredients.split(',').map(i => i.trim()),
+        instructions: recipe.instructions.split('.').map(i => i.trim()).filter(Boolean)
+      }));
+
+      setRecipes(parsedRecipes);
+      setFilteredRecipes(parsedRecipes);
+      setCuisines(cuisinesRes.data);
+      setIngredients(ingredientsRes.data);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching data:', err);
+      setLoading(false);
+    }
+  };
+
+  // Initial data fetch
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [recipesRes, cuisinesRes, ingredientsRes] = await Promise.all([
-          axios.get('/api/recipes'),
-          axios.get('/api/recipes/cuisines'),
-          axios.get('/api/recipes/ingredients')
-        ]);
-  
-        const parsedRecipes = recipesRes.data.map(recipe => ({
-          ...recipe,
-          ingredients: recipe.ingredients.split(',').map(i => i.trim()),
-          instructions: recipe.instructions.split('.').map(i => i.trim()).filter(Boolean)
-        }));
-  
-        setRecipes(parsedRecipes);
-        setFilteredRecipes(parsedRecipes);
-        setCuisines(cuisinesRes.data);
-        setIngredients(ingredientsRes.data);
-        setLoading(false);
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setLoading(false);
-      }
-    };
-  
     fetchData();
   }, []);
-  
+
+  // Handle refresh when new recipe is added
+  useEffect(() => {
+    if (shouldRefresh) {
+      fetchData();
+      onRefreshComplete();
+    }
+  }, [shouldRefresh, onRefreshComplete]);
 
   useEffect(() => {
     let results = [...recipes];
